@@ -21,13 +21,32 @@ pg.connect((e) => {
   }
 });
 
-const query = (queryStr, callback) => {
+const query = async (queryStr, callback) => {
   pg.query(queryStr, (e, res) => {
     if (!e) {
       callback(res);
     } else console.log(e);
-    pg.end();
+    // pg.end();
   });
+};
+
+const checkOneCom = async (word) => {
+  let last = word.split("").pop();
+  console.log("{}이 한 방 단어인지 체크 중..".format(last));
+  result = false;
+  await query(
+    "SELECT * FROM public.kkutu_ko WHERE _id LIKE '{}%';".format(last),
+    (qres) => {
+      if (qres.rowCount >= 1) {
+        console.log("반격 할 수 있습니다!");
+        result = false;
+      } else {
+        console.log("한 방 단어!");
+        result = true;
+      }
+    }
+  );
+  return result;
 };
 
 // Requests
@@ -38,9 +57,10 @@ app.post("/answer", (req, res) => {
   if (typeof answer == "string") {
     query(
       "SELECT * FROM public.kkutu_ko WHERE _id = '{}';".format(answer),
-      (qres) => {
+      async (qres) => {
         if (qres.rowCount >= 1) {
           res.send("단어 {}를 찾았습니다!".format(answer));
+          checkOneCom(answer);
         } else {
           res.send("그런 단어는 없습니다!");
         }
