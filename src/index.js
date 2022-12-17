@@ -1,5 +1,6 @@
 const fs = require("fs");
 const express = require("express");
+const session = require("express-session");
 const bodyParser = require("body-parser");
 const { Client } = require("pg");
 const Query = require("pg").Query;
@@ -7,6 +8,7 @@ require("./format");
 
 // Init
 const app = express();
+app.use(session({}));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 // app.use(bodyParser.text());
@@ -49,8 +51,17 @@ const checkOneCom = async (word) => {
   return result;
 };
 
+gameData = [];
+
 // Requests
 // app.get("/", (req, res) => {});
+
+app.get("/", (req, res) => {
+  console.log(req.session);
+  if (req.session == null) {
+  }
+  res.send("ok");
+});
 
 app.post("/answer", (req, res) => {
   let answer = req.body.answer;
