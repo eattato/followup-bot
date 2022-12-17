@@ -5,3 +5,7 @@ String.prototype.format = function () {
   }
   return result;
 };
+
+const random = (min, max) => {
+  return Math.floor(Math.random() * max + min);
+};

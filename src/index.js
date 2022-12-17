@@ -4,11 +4,14 @@ const session = require("express-session");
 const bodyParser = require("body-parser");
 const { Client } = require("pg");
 const Query = require("pg").Query;
+const Path = require("path");
 require("./format");
 
 // Init
 const app = express();
-app.use(session({}));
+app.use(
+  session(JSON.parse(fs.readFileSync("././config/session.json", "utf8")))
+);
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 // app.use(bodyParser.text());
@@ -22,6 +25,8 @@ pg.connect((e) => {
     console.log("데이터베이스 연결 완료");
   }
 });
+
+const chatData = JSON.parse(fs.readFileSync("././resource/chat.json", "utf8"));
 
 const query = async (queryStr, callback) => {
   pg.query(queryStr, (e, res) => {
@@ -51,16 +56,16 @@ const checkOneCom = async (word) => {
   return result;
 };
 
-gameData = [];
+const sessionInit = (session) => {
+  if (session.turn == null) {
+    session.turn = "user";
+    session.word = "";
+  }
+};
 
 // Requests
-// app.get("/", (req, res) => {});
-
-app.get("/", (req, res) => {
-  console.log(req.session);
-  if (req.session == null) {
-  }
-  res.send("ok");
+app.get("/chat", (req, res) => {
+  res.send(chatData);
 });
 
 app.post("/answer", (req, res) => {
@@ -85,7 +90,7 @@ app.post("/answer", (req, res) => {
 });
 
 // Static pages
-// app.use("/", express.static(__dirname + "/pages/main"));
+app.use("/main", express.static(Path.resolve(__dirname, "../pages/main")));
 
 // Run server
 let server = app.listen(8887, () => {
