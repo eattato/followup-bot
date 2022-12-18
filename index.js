@@ -47,64 +47,247 @@ const chatData = JSON.parse(
   fs.readFileSync("././public/resource/chat.json", "utf8")
 );
 
-const query = async (queryStr, callback) => {
-  pg.query(queryStr, (e, res) => {
-    if (!e) {
-      callback(res);
-    } else console.log(e);
-    // pg.end();
+// DB 쿼리 함수
+const query = (queryStr, callback) => {
+  // console.log(queryStr);
+  // Promise 객체를 리턴
+  return new Promise((resolve, reject) => {
+    // 비동기함수인 pg.query를 실행, 값을 받고 resolve로 promise.then으로 전달
+    pg.query(queryStr, (e, res) => {
+      if (e) {
+        reject(e);
+      } else {
+        resolve(res); // 콜백에서 resolve 실행, query().then((res) => {})로 받을 수 있음
+      }
+      // pg.end();
+    });
   });
 };
 
-const checkOneCom = async (word) => {
-  let last = word.split("").pop();
-  console.log("{}이 한 방 단어인지 체크 중..".format(last));
-  result = false;
-  await query(
-    "SELECT * FROM public.kkutu_ko WHERE _id LIKE '{}%';".format(last),
-    (qres) => {
-      if (qres.rowCount >= 1) {
+// 한 방 단어 여부 체크
+const checkOneCom = (word) => {
+  return new Promise((resolve, reject) => {
+    // console.log("{}이 한 방 단어인지 체크 중..".format(last));
+    let last = word.split("").pop();
+    query(
+      "SELECT * FROM public.kkutu_ko WHERE _id LIKE '{}%' AND CHAR_LENGTH(_id) > 1;".format(
+        last
+      )
+    ).then((res) => {
+      if (res.rowCount >= 1) {
         console.log("반격 할 수 있습니다!");
-        result = false;
+        resolve(false);
       } else {
-        console.log("한 방 단어!");
-        result = true;
+        console.log("한 방 단어입니다!");
+        resolve(true);
       }
-    }
-  );
-  return result;
+    });
+  });
 };
 
-const sessionInit = (session) => {
-  if (session.turn == null) {
-    session.turn = "user";
-    session.word = "";
+const usedFilter = (used) => {
+  let output = "";
+  for (let ind in used) {
+    let word = used[ind];
+    output += " AND _id != '{}'".format(word);
   }
+  return output;
+};
+
+const getMin = (target) => {
+  let result = null;
+  for (let key in target) {
+    if (result == null) {
+      result = key;
+    } else {
+      if (target[key] > target[result]) {
+        result = key;
+      }
+    }
+  }
+  return result;
 };
 
 // Requests
 app.get("/chat", (req, res) => {
-  res.send(chatData);
+  res.json(chatData);
+});
+
+app.get("/init", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  // if (req.session.word == null) {
+  query(
+    "SELECT _id FROM public.kkutu_ko WHERE CHAR_LENGTH(_id) > 1 AND CHAR_LENGTH(_id) <= 5;"
+  ).then((qres) => {
+    if (qres.rowCount >= 1) {
+      selectedWord = qres.rows[random(0, qres.rowCount - 1)]["_id"];
+      req.session.word = selectedWord.charAt(0);
+      req.session.used = [];
+      req.session.turn = 0;
+      console.log("시작: " + selectedWord);
+
+      res.json({
+        result: true,
+        word: req.session.word,
+        used: req.session.used,
+        turn: req.session.turn,
+      });
+    } else {
+      res.json({
+        result: false,
+      });
+    }
+  });
+  // }
 });
 
 app.post("/answer", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  let session = req.session;
   let answer = req.body.answer;
-  if (typeof answer == "string") {
-    query(
-      "SELECT * FROM public.kkutu_ko WHERE _id = '{}';".format(answer),
-      async (qres) => {
-        if (qres.rowCount >= 1) {
-          res.send("단어 {}를 찾았습니다!".format(answer));
-          checkOneCom(answer);
+
+  if (session.word != null) {
+    if (typeof answer == "string") {
+      // 첫 자 동일 여부
+      if (answer.charAt(0) == session.word.charAt(session.word.length - 1)) {
+        // 사용 여부
+        if (answer in session.used == false) {
+          // 단어 존재 여부 체크
+          query(
+            "SELECT * FROM public.kkutu_ko WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
+              answer
+            )
+          ).then((qres) => {
+            if (qres.rowCount >= 1) {
+              session.word = answer.charAt(answer.length - 1);
+              session.turn += 1;
+              session.used.push(answer);
+
+              // 한 방 단어 체크
+              query(
+                "SELECT _id FROM public.kkutu_ko WHERE _id LIKE '{}%' AND CHAR_LENGTH(_id) > 1{};".format(
+                  answer.charAt(answer.length - 1),
+                  usedFilter(session.used)
+                )
+              ).then((qres) => {
+                if (qres.rowCount >= 1) {
+                  // 수비
+                  resData = {
+                    result: true,
+                    word: session.word,
+                    used: session.used,
+                    turn: session.turn,
+                  };
+                  let wordDatas = {};
+
+                  // 단어 방어력 체크
+                  let wordCheckPromises = [];
+                  console.log("{}개의 방어력 체크..".format(qres.rowCount));
+                  for (let ind in qres.rows) {
+                    let word = qres.rows[ind]["_id"];
+                    let wordCheck = query(
+                      "SELECT _id FROM public.kkutu_ko WHERE _id LIKE '{}%' AND CHAR_LENGTH(_id) > 1 AND _id != '{}'{};".format(
+                        word.charAt(word.length - 1),
+                        word,
+                        usedFilter(session.used)
+                      )
+                    ).then((qres) => {
+                      wordDatas[word] = qres.rowCount;
+                      console.log("done");
+                    });
+                    wordCheckPromises.push(wordCheck);
+                  }
+                  console.log(wordDatas);
+
+                  // 모든 방어력 체크가 끝날때까지 대기
+                  Promise.all(wordCheckPromises).then(() => {
+                    // 가장 방어력이 높은 단어 채택
+                    let attack = null;
+                    let ind = 0;
+                    for (let key in wordDatas) {
+                      ind += 1;
+                      if (wordDatas[key] != 0) {
+                        if (
+                          attack == null ||
+                          wordDatas[key] < wordDatas[attack]
+                        ) {
+                          attack = key;
+                        }
+                      }
+                    }
+
+                    if (attack != null) {
+                      session.word = attack;
+                      console.log("수비: {}".format(session.word));
+                    } else {
+                      // 한 방 단어 밖에 없음
+                      session.word = wordDatas[random(0, wordDatas.length - 1)];
+                      console.log(
+                        "한 방 단어로 공격!: {}".format(session.word)
+                      );
+                      resData["chat"] = "finish";
+                      resData["chatFirst"] = true;
+                    }
+                    session.used.push(session.word);
+                    res.json(resData);
+                  });
+                } else {
+                  // 한 방 단어 또는 다 소진된 단어로 공격 받음
+                  if (session.turn == 1) {
+                    res.json({
+                      result: false,
+                      error: "no kill word in first", // 첫 공격에 한 방 단어
+                    });
+                  } else {
+                    // 유저 승리
+                    res.json({
+                      result: true,
+                      word: "victory",
+                      used: req.session.used,
+                      turn: req.session.turn,
+                    });
+                    req.session.word = null;
+                    req.session.used = null;
+                    req.session.turn = null;
+                  }
+                }
+              });
+            } else {
+              res.json({
+                result: false,
+                error: "no such word", // 해당 단어 없음
+              });
+            }
+          });
         } else {
-          res.send("그런 단어는 없습니다!");
+          res.json({
+            result: false,
+            error: "already used", // 이미 사용된 단어
+          });
         }
+      } else {
+        console.log(
+          "{} != {}".format(
+            answer.charAt(0),
+            session.word.charAt(session.word.length - 1)
+          )
+        );
+        res.json({
+          result: false,
+          error: "not same start", // 잘못된 시작 단어
+        });
       }
-    );
+    } else {
+      res.json({
+        result: false,
+        error: "answer not string", // 잘못된 입력
+      });
+    }
   } else {
-    res.send(
-      "매개변수 answer는 string 형태여야 합니다! 입력: {}".format(typeof answer)
-    );
+    res.json({
+      result: false,
+      error: "not logged in", // 로그인 안 됨
+    });
   }
 });
 
