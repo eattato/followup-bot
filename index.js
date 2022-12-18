@@ -172,12 +172,6 @@ app.post("/answer", (req, res) => {
               ).then((qres) => {
                 if (qres.rowCount >= 1) {
                   // 수비
-                  resData = {
-                    result: true,
-                    word: session.word,
-                    used: session.used,
-                    turn: session.turn,
-                  };
                   let wordDatas = {};
 
                   // 단어 방어력 체크
@@ -225,10 +219,19 @@ app.post("/answer", (req, res) => {
                       console.log(
                         "한 방 단어로 공격!: {}".format(session.word)
                       );
+                    }
+                    session.used.push(session.word);
+
+                    let resData = {
+                      result: true,
+                      word: session.word,
+                      used: session.used,
+                      turn: session.turn,
+                    };
+                    if (attack == null) {
                       resData["chat"] = "finish";
                       resData["chatFirst"] = true;
                     }
-                    session.used.push(session.word);
                     res.json(resData);
                   });
                 } else {
