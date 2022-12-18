@@ -51,9 +51,17 @@ const chat = (frame, content) => {
   }, duration);
 };
 
+// 기록 남기기
+const usedLog = (frame, content) => {
+  let log = $($.parseHTML("<div class='used_log'></div>"));
+  log.text(content);
+  frame.prepend(log);
+};
+
 $().ready(() => {
   let session = null;
   let input = $(".input_frame input");
+  let logFrame = $(".used_list");
   // 유저 세션 가져오기
   fetch(url + "/init", {
     method: "GET",
@@ -106,6 +114,7 @@ $().ready(() => {
         if (data.result == true) {
           // 오류 없으면 자신의 공격 단어 표시
           chat(userChatFrame, content);
+          usedLog(logFrame, content);
 
           // 봇이 공격을 수비했음
           if (data.word != "victory") {
@@ -119,6 +128,7 @@ $().ready(() => {
             // 봇의 수비 단어를 표시
             setTimeout(() => {
               chat(botChatFrame, data.word);
+              usedLog(logFrame, data.word);
             }, 500);
 
             if (data.chat != null) {
