@@ -13,6 +13,16 @@ const random = (min, max) => {
   return Math.floor(Math.random() * max + min);
 };
 
+const shuffle = (sourceArray) => {
+  for (var i = 0; i < sourceArray.length - 1; i++) {
+    var j = i + Math.floor(Math.random() * (sourceArray.length - i));
+
+    var temp = sourceArray[j];
+    sourceArray[j] = sourceArray[i];
+    sourceArray[i] = temp;
+  }
+};
+
 // 대상 채팅 프레임에 새 말풍선 추가
 const chat = (frame, content) => {
   let duration = 4000;

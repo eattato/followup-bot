@@ -26,6 +26,16 @@ const random = (min, max) => {
   return Math.floor(Math.random() * max + min);
 };
 
+const shuffle = (sourceArray) => {
+  for (var i = 0; i < sourceArray.length - 1; i++) {
+    var j = i + Math.floor(Math.random() * (sourceArray.length - i));
+
+    var temp = sourceArray[j];
+    sourceArray[j] = sourceArray[i];
+    sourceArray[i] = temp;
+  }
+};
+
 const app = express();
 app.use(
   session(JSON.parse(fs.readFileSync("././config/session.json", "utf8")))
@@ -215,6 +225,7 @@ app.post("/answer", (req, res) => {
                   // 단어 방어력 체크
                   let wordCheckPromises = [];
                   console.log("{}개의 방어력 체크..".format(qres.rowCount));
+                  shuffle(qres.rows);
                   for (let ind in qres.rows) {
                     let word = qres.rows[ind]["_id"];
                     let wordCheck = query(
