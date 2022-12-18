@@ -3,18 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <title>끝말잇기</title>
-    <link rel="stylesheet" href="css/style.css" />
-    <script src="js/jquery.js"></script>
-    <script src="js/scripts.js"></script>
+    <link rel="stylesheet" href="pages/main/css/style.css" />
+    <script src="pages/fragments/js/jquery.js"></script>
+    <script src="resource/chat.json"></script>
+    <script src="pages/main/js/scripts.js"></script>
   </head>
   <body>
     <div class="wrap">
       <div class="face_frame bot">
         <div class="face">
-          <img src="../../resource/images/faces/haha.webp" />
+          <img src="resource/images/faces/haha.webp" />
         </div>
         <div class="chat_frame">
-          <img class="chat_tail" src="../../resource/images/chat/tail.png" />
+          <div class="chat_main"></div>
+          <img class="chat_tail" src="resource/images/chat/tail.png" />
         </div>
       </div>
       <div class="used_list"></div>
@@ -22,9 +24,10 @@
       <div class="user">
         <div class="face_frame user">
           <div class="face">
-            <img src="../../resource/images/default.png" />
+            <img src="resource/images/default.png" />
           </div>
           <div class="chat_frame">
+            <div class="chat_main"></div>
             <img class="chat_tail" src="../../resource/images/chat/tail.png" />
           </div>
         </div>
