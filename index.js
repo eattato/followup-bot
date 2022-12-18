@@ -165,11 +165,11 @@ app.post("/answer", (req, res) => {
         // 한자음 랴, 려, 례, 료, 류, 리 → 야, 여, 예, 요, 유, 이
         charSplit[0] == "ㄹ" &&
         (charSplit[1] == "ㅑ" ||
-          charSplit[1] == "ㅑ" ||
-          charSplit[1] == "ㅑ" ||
-          charSplit[1] == "ㅑ" ||
-          charSplit[1] == "ㅑ" ||
-          charSplit[1] == "ㅑ")
+          charSplit[1] == "ㅕ" ||
+          charSplit[1] == "ㅖ" ||
+          charSplit[1] == "ㅛ" ||
+          charSplit[1] == "ㅠ" ||
+          charSplit[1] == "ㅣ")
       ) {
         charSplit[0] = "ㅇ";
       } else if (
@@ -238,9 +238,7 @@ app.post("/answer", (req, res) => {
                   Promise.all(wordCheckPromises).then(() => {
                     // 가장 방어력이 높은 단어 채택
                     let attack = null;
-                    let ind = 0;
                     for (let key in wordDatas) {
-                      ind += 1;
                       if (wordDatas[key] != 0) {
                         if (
                           attack == null ||
