@@ -23,8 +23,8 @@
     "express-session": "^1.17.3",
     "express-thymeleaf": "^0.3.0",
     "fs": "^0.0.1-security",
+    "hangul-js": "^0.2.6",
     "path": "^0.12.7",
-    "pg": "^8.8.0",
-    "thymeleaf": "^0.21.0"
+    "pg": "^8.8.0"
   }
 }

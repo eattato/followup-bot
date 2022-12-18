@@ -24,6 +24,7 @@ const chat = (frame, content) => {
   frame.data("new", bubble);
 
   frame.parent().addClass("active");
+  frame.parent().stop();
   frame.parent().css({ opacity: 1 });
   setTimeout(() => {
     if (frame.data("new") == bubble) {

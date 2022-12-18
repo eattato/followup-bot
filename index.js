@@ -2,10 +2,11 @@ const fs = require("fs");
 
 const express = require("express");
 const expressThymeleaf = require("express-thymeleaf");
-const { TemplateEngine } = require("thymeleaf");
+// const { TemplateEngine } = require("thymeleaf");
 const session = require("express-session");
 const bodyParser = require("body-parser");
 const { Client } = require("pg");
+const Hangul = require("hangul-js");
 
 const Query = require("pg").Query;
 const Path = require("path");
@@ -31,7 +32,7 @@ app.use(
 );
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.engine("html", expressThymeleaf(new TemplateEngine()));
+// app.engine("html", expressThymeleaf(new TemplateEngine()));
 
 const dbConfig = JSON.parse(fs.readFileSync("././config/db.json", "utf8"));
 const pg = new Client(dbConfig);
@@ -148,8 +149,45 @@ app.post("/answer", (req, res) => {
 
   if (session.word != null) {
     if (typeof answer == "string") {
+      // 두음 법칙 적용
+      let originWord = session.word.charAt(session.word.length - 1);
+      let charSplit = Hangul.disassemble(originWord);
+      if (
+        // 한자음 녀, 뇨, 뉴, 니 → 여, 요, 유, 이
+        charSplit[0] == "ㄴ" &&
+        (charSplit[1] == "ㅕ" ||
+          charSplit[1] == "ㅛ" ||
+          charSplit[1] == "ㅠ" ||
+          charSplit[1] == "ㅣ")
+      ) {
+        charSplit[0] = "ㅇ";
+      } else if (
+        // 한자음 랴, 려, 례, 료, 류, 리 → 야, 여, 예, 요, 유, 이
+        charSplit[0] == "ㄹ" &&
+        (charSplit[1] == "ㅑ" ||
+          charSplit[1] == "ㅑ" ||
+          charSplit[1] == "ㅑ" ||
+          charSplit[1] == "ㅑ" ||
+          charSplit[1] == "ㅑ" ||
+          charSplit[1] == "ㅑ")
+      ) {
+        charSplit[0] = "ㅇ";
+      } else if (
+        // 한자음 라, 래, 로, 뢰, 루, 르 → 나, 내, 노, 뇌, 누, 느
+        charSplit[0] == "ㄹ" &&
+        (charSplit[1] == "ㅏ" ||
+          charSplit[1] == "ㅐ" ||
+          charSplit[1] == "ㅗ" ||
+          (charSplit[1] == "ㅗ" && charSplit[2] == "ㅣ") ||
+          charSplit[1] == "ㅜ" ||
+          charSplit[1] == "ㅡ")
+      ) {
+        charSplit[0] = "ㄴ";
+      }
+      charSplit = Hangul.assemble(charSplit);
+
       // 첫 자 동일 여부
-      if (answer.charAt(0) == session.word.charAt(session.word.length - 1)) {
+      if (answer.charAt(0) == originWord || answer.charAt(0) == charSplit) {
         // 사용 여부
         if (answer in session.used == false) {
           // 단어 존재 여부 체크
@@ -187,11 +225,14 @@ app.post("/answer", (req, res) => {
                       )
                     ).then((qres) => {
                       wordDatas[word] = qres.rowCount;
-                      console.log("done");
                     });
                     wordCheckPromises.push(wordCheck);
+
+                    if (ind >= 10) {
+                      // 일단 방어력 체크 쿼리 10개로 제한
+                      break;
+                    }
                   }
-                  console.log(wordDatas);
 
                   // 모든 방어력 체크가 끝날때까지 대기
                   Promise.all(wordCheckPromises).then(() => {
@@ -230,6 +271,9 @@ app.post("/answer", (req, res) => {
                     };
                     if (attack == null) {
                       resData["chat"] = "finish";
+                      resData["chatFirst"] = true;
+                    } else if (qres.rowCount <= 30) {
+                      resData["chat"] = "danger";
                       resData["chatFirst"] = true;
                     }
                     res.json(resData);
