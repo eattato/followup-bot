@@ -220,7 +220,7 @@ app.post("/answer", (req, res) => {
               ).then((qres) => {
                 if (qres.rowCount >= 1) {
                   // 수비
-                  let wordDatas = {};
+                  let wordDatas = [];
 
                   // 단어 방어력 체크
                   let wordCheckPromises = [];
@@ -235,7 +235,10 @@ app.post("/answer", (req, res) => {
                         usedFilter(session.used)
                       )
                     ).then((qres) => {
-                      wordDatas[word] = qres.rowCount;
+                      wordDatas.push({
+                        word: word,
+                        count: qres.rowCount,
+                      });
                     });
                     wordCheckPromises.push(wordCheck);
 
@@ -249,23 +252,25 @@ app.post("/answer", (req, res) => {
                   Promise.all(wordCheckPromises).then(() => {
                     // 가장 방어력이 높은 단어 채택
                     let attack = null;
-                    for (let key in wordDatas) {
-                      if (wordDatas[key] != 0) {
+                    for (let ind in wordDatas) {
+                      let wordData = wordDatas[ind];
+                      if (wordData.count != 0) {
                         if (
                           attack == null ||
-                          wordDatas[key] < wordDatas[attack]
+                          wordData.count < wordDatas[attack].count
                         ) {
-                          attack = key;
+                          attack = ind;
                         }
                       }
                     }
 
                     if (attack != null) {
-                      session.word = attack;
+                      session.word = wordDatas[attack].word;
                       console.log("수비: {}".format(session.word));
                     } else {
                       // 한 방 단어 밖에 없음
-                      session.word = wordDatas[random(0, wordDatas.length - 1)];
+                      attack = random(0, wordDatas.length - 1);
+                      session.word = wordDatas[attack].word;
                       console.log(
                         "한 방 단어로 공격!: {}".format(session.word)
                       );
@@ -281,6 +286,9 @@ app.post("/answer", (req, res) => {
                     if (attack == null) {
                       resData["chat"] = "finish";
                       resData["chatFirst"] = true;
+                    } else if (wordDatas[attack].count <= 30) {
+                      resData["chat"] = "attack";
+                      resData["chatFirst"] = false;
                     } else if (qres.rowCount <= 30) {
                       resData["chat"] = "danger";
                       resData["chatFirst"] = true;
