@@ -183,8 +183,12 @@ const getMeaning = (target) => {
         )
       )
       .then((res) => {
-        let items = res.data.channel.item;
-        target.desc = items[0].sense.definition;
+        try {
+          let items = res.data.channel.item;
+          target.desc = items[0].sense.definition;
+        } catch (e) {
+          target.desc = "뜻을 로드하지 못했습니다..";
+        }
         resolve();
       });
   });
