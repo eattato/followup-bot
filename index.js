@@ -1,8 +1,6 @@
 const fs = require("fs");
 
 const express = require("express");
-// const expressThymeleaf = require("express-thymeleaf");
-// const { TemplateEngine } = require("thymeleaf");
 const session = require("express-session");
 const bodyParser = require("body-parser");
 const { Client } = require("pg");
@@ -10,8 +8,7 @@ const Hangul = require("hangul-js");
 
 const Query = require("pg").Query;
 const Path = require("path");
-const ejs = require("ejs");
-const { application } = require("express");
+const axios = require("axios");
 
 // Init
 String.prototype.format = function () {
@@ -57,6 +54,9 @@ pg.connect((e) => {
 const chatData = JSON.parse(
   fs.readFileSync("././public/resource/chat.json", "utf8")
 );
+const dictionaryKey = JSON.parse(
+  fs.readFileSync("././config/key.json", "utf8")
+)["key"];
 
 // DB 쿼리 함수
 const query = (queryStr, callback) => {
@@ -65,7 +65,8 @@ const query = (queryStr, callback) => {
   return new Promise((resolve, reject) => {
     // {tables}이 있다면 UNION으로 여러 테이블 묶어서 실행
     if (queryStr.indexOf("{tables}") != -1) {
-      let tables = ["public.kkutu_ko", "public.kkutu_injeong"];
+      //let tables = ["public.kkutu_ko", "public.kkutu_injeong"];
+      let tables = ["public.kkutu_ko"];
       let queries = [];
       queryStr = queryStr.replace(";", "");
       for (let ind in tables) {
@@ -171,7 +172,33 @@ const duum = (originWord) => {
   return charSplit;
 };
 
+// 뜻을 찾아줌
+const getMeaning = (target) => {
+  return new Promise((resolve, reject) => {
+    axios
+      .get(
+        "https://stdict.korean.go.kr/api/search.do?key={}&type_search=search&req_type=json&q={}".format(
+          dictionaryKey,
+          target.word
+        )
+      )
+      .then((res) => {
+        let items = res.data.channel.item;
+        target.desc = items[0].sense.definition;
+        resolve();
+      });
+  });
+};
+
 // Requests
+// app.post("/query", (req, res) => {
+//   query(req.body.query).then((qres) => {
+//     console.log(qres.rows);
+//     console.log(qres.rowCount);
+//     res.send(qres.rows);
+//   });
+// });
+
 app.get("/chat", (req, res) => {
   res.json(chatData);
 });
@@ -186,7 +213,6 @@ app.get("/init", (req, res) => {
       selectedWord = qres.rows[random(0, qres.rowCount - 1)]["_id"];
       req.session.word = selectedWord.charAt(0);
       req.session.used = [];
-      req.session.desc = [];
       req.session.turn = 0;
       console.log("시작: " + selectedWord);
 
@@ -194,7 +220,6 @@ app.get("/init", (req, res) => {
         result: true,
         word: req.session.word,
         used: req.session.used,
-        desc: req.session.desc,
         turn: req.session.turn,
       });
     } else {
@@ -238,7 +263,10 @@ app.post("/answer", (req, res) => {
             if (qres.rowCount >= 1) {
               session.word = answer.charAt(answer.length - 1);
               session.turn += 1;
-              session.used.push({ word: answer, desc: qres.rows[0]["mean"] });
+
+              let answerData = { word: answer, desc: qres.rows[0]["mean"] };
+              session.used.push(answerData);
+              let answerDesc = getMeaning(answerData);
 
               // 한 방 단어 체크
               query(
@@ -308,15 +336,17 @@ app.post("/answer", (req, res) => {
                         "한 방 단어로 공격!: {}".format(session.word)
                       );
                     }
-                    session.used.push({
+
+                    let defenseData = {
                       word: session.word,
                       desc: wordDatas[attack].desc,
-                    });
+                    };
+                    session.used.push(defenseData);
+                    let defenseDesc = getMeaning(defenseData);
 
                     let resData = {
                       result: true,
                       word: session.word,
-                      desc: session.desc,
                       used: session.used,
                       turn: session.turn,
                     };
@@ -330,7 +360,11 @@ app.post("/answer", (req, res) => {
                       resData["chat"] = "danger";
                       resData["chatFirst"] = true;
                     }
-                    res.json(resData);
+
+                    // 단어 뜻 모두 찾을 때 까지 대기
+                    Promise.all([answerDesc, defenseDesc]).then(() => {
+                      res.json(resData);
+                    });
                   });
                 } else {
                   // 한 방 단어 또는 다 소진된 단어로 공격 받음
