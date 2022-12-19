@@ -186,6 +186,7 @@ app.get("/init", (req, res) => {
       selectedWord = qres.rows[random(0, qres.rowCount - 1)]["_id"];
       req.session.word = selectedWord.charAt(0);
       req.session.used = [];
+      req.session.desc = [];
       req.session.turn = 0;
       console.log("시작: " + selectedWord);
 
@@ -193,6 +194,7 @@ app.get("/init", (req, res) => {
         result: true,
         word: req.session.word,
         used: req.session.used,
+        desc: req.session.desc,
         turn: req.session.turn,
       });
     } else {
@@ -218,21 +220,29 @@ app.post("/answer", (req, res) => {
       // 첫 자 동일 여부
       if (answer.charAt(0) == originWord || answer.charAt(0) == charSplit) {
         // 사용 여부
-        if (session.used.includes(answer) == false) {
+        let alreadyUsed = false;
+        for (let ind in session.used) {
+          let usedData = session.used[ind];
+          if (usedData.word == answer) {
+            alreadyUsed = true;
+            break;
+          }
+        }
+        if (alreadyUsed == false) {
           // 단어 존재 여부 체크
           query(
-            "SELECT _id FROM {tables} WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
+            "SELECT _id, mean FROM {tables} WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
               answer
             )
           ).then((qres) => {
             if (qres.rowCount >= 1) {
               session.word = answer.charAt(answer.length - 1);
               session.turn += 1;
-              session.used.push(answer);
+              session.used.push({ word: answer, desc: qres.rows[0]["mean"] });
 
               // 한 방 단어 체크
               query(
-                "SELECT _id FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1{};".format(
+                "SELECT _id, mean FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1{};".format(
                   answer.charAt(answer.length - 1),
                   duum(answer.charAt(answer.length - 1)),
                   usedFilter(session.used)
@@ -248,6 +258,7 @@ app.post("/answer", (req, res) => {
                   shuffle(qres.rows);
                   for (let ind in qres.rows) {
                     let word = qres.rows[ind]["_id"];
+                    let desc = qres.rows[ind]["mean"];
                     let wordCheck = query(
                       "SELECT _id FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1 AND _id != '{}'{};".format(
                         word.charAt(word.length - 1),
@@ -258,6 +269,7 @@ app.post("/answer", (req, res) => {
                     ).then((qres) => {
                       wordDatas.push({
                         word: word,
+                        desc: desc,
                         count: qres.rowCount,
                       });
                     });
@@ -296,11 +308,15 @@ app.post("/answer", (req, res) => {
                         "한 방 단어로 공격!: {}".format(session.word)
                       );
                     }
-                    session.used.push(session.word);
+                    session.used.push({
+                      word: session.word,
+                      desc: wordDatas[attack].desc,
+                    });
 
                     let resData = {
                       result: true,
                       word: session.word,
+                      desc: session.desc,
                       used: session.used,
                       turn: session.turn,
                     };
