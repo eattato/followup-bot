@@ -71,6 +71,14 @@ body {
   flex-shrink: 0;
 }
 
+.used_log.bot {
+  border-color: orange;
+}
+
+.used_log.bot {
+  border-color: cornflowerblue;
+}
+
 .used_main {
   font-size: 16px;
   text-align: center;

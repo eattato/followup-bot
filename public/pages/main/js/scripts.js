@@ -52,13 +52,16 @@ const chat = (frame, content) => {
 };
 
 // 기록 남기기
-const usedLog = (frame, content) => {
+const usedLog = (frame, content, who) => {
   let log = $(
     $.parseHTML(
       "<div class='used_log'><div class='used_main'></div><div class='used_desc'></div></div>"
     )
   );
   log.find(".used_main").text(content);
+  if (who != null) {
+    log.addClass(who);
+  }
   frame.prepend(log);
 };
 
@@ -118,7 +121,7 @@ $().ready(() => {
         if (data.result == true) {
           // 오류 없으면 자신의 공격 단어 표시
           chat(userChatFrame, content);
-          usedLog(logFrame, content);
+          usedLog(logFrame, content, "user");
 
           // 봇이 공격을 수비했음
           if (data.word != "victory") {
@@ -132,7 +135,7 @@ $().ready(() => {
             // 봇의 수비 단어를 표시
             setTimeout(() => {
               chat(botChatFrame, data.word);
-              usedLog(logFrame, data.word);
+              usedLog(logFrame, data.word, "bot");
             }, 500);
 
             if (data.chat != null) {
