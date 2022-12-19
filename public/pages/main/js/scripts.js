@@ -153,6 +153,14 @@ $().ready(() => {
                 chatData.lose[random(0, chatData.lose.length - 1)]
               );
             }, 500);
+
+            setTimeout(() => {
+              alert(
+                "당신이 승리했습니다!\n{}턴에 걸쳐 승리!\n다시 플레이하려면 새로고침을 누르세요.".format(
+                  session.turn
+                )
+              );
+            }, 2000);
           }
         } else {
           // 오류 발생
