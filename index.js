@@ -218,7 +218,7 @@ app.post("/answer", (req, res) => {
       // 첫 자 동일 여부
       if (answer.charAt(0) == originWord || answer.charAt(0) == charSplit) {
         // 사용 여부
-        if (answer in session.used == false) {
+        if (session.used.includes(answer) == false) {
           // 단어 존재 여부 체크
           query(
             "SELECT _id FROM {tables} WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
