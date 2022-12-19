@@ -74,14 +74,14 @@ body {
 .used_main {
   font-size: 16px;
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .used_desc {
   font-size: 12px;
   color: gray;
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 ::-webkit-scrollbar {
