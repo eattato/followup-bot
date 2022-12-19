@@ -59,18 +59,29 @@ body {
 }
 
 .used_log {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100px;
   height: 100px;
-  text-align: center;
-  line-height: 100px;
-  font-size: 16px;
   border: 3px solid lightgray;
   border-radius: 20px;
   background-color: ghostwhite;
   margin-right: 10px;
-  word-wrap: break-word;
   flex-shrink: 0;
 }
+
+.used_main {
+  font-size: 16px;
+  word-wrap: break-word;
+}
+
+.used_desc {
+  font-size: 12px;
+  color: gray;
+  word-wrap: break-word;
+}
+
 ::-webkit-scrollbar {
   background-color: transparent;
   height: 10px;

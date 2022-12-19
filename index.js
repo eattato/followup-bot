@@ -1,7 +1,7 @@
 const fs = require("fs");
 
 const express = require("express");
-const expressThymeleaf = require("express-thymeleaf");
+// const expressThymeleaf = require("express-thymeleaf");
 // const { TemplateEngine } = require("thymeleaf");
 const session = require("express-session");
 const bodyParser = require("body-parser");
@@ -63,6 +63,19 @@ const query = (queryStr, callback) => {
   // console.log(queryStr);
   // Promise 객체를 리턴
   return new Promise((resolve, reject) => {
+    // {tables}이 있다면 UNION으로 여러 테이블 묶어서 실행
+    if (queryStr.indexOf("{tables}") != -1) {
+      let tables = ["public.kkutu_ko", "public.kkutu_injeong"];
+      let queries = [];
+      queryStr = queryStr.replace(";", "");
+      for (let ind in tables) {
+        let tableName = tables[ind];
+        let queryCopy = queryStr.replace("{tables}", tableName);
+        queries.push(queryCopy);
+      }
+      queryStr = queries.join(" UNION ") + ";";
+    }
+
     // 비동기함수인 pg.query를 실행, 값을 받고 resolve로 promise.then으로 전달
     pg.query(queryStr, (e, res) => {
       if (e) {
@@ -81,7 +94,7 @@ const checkOneCom = (word) => {
     // console.log("{}이 한 방 단어인지 체크 중..".format(last));
     let last = word.split("").pop();
     query(
-      "SELECT * FROM public.kkutu_ko WHERE _id LIKE '{}%' AND CHAR_LENGTH(_id) > 1;".format(
+      "SELECT _id FROM {tables} WHERE _id LIKE '{}%' AND CHAR_LENGTH(_id) > 1;".format(
         last
       )
     ).then((res) => {
@@ -119,6 +132,45 @@ const getMin = (target) => {
   return result;
 };
 
+// 두음법칙 적용해서 리턴해주는 함수
+const duum = (originWord) => {
+  let charSplit = Hangul.disassemble(originWord);
+  if (
+    // 한자음 녀, 뇨, 뉴, 니 → 여, 요, 유, 이
+    charSplit[0] == "ㄴ" &&
+    (charSplit[1] == "ㅕ" ||
+      charSplit[1] == "ㅛ" ||
+      charSplit[1] == "ㅠ" ||
+      charSplit[1] == "ㅣ")
+  ) {
+    charSplit[0] = "ㅇ";
+  } else if (
+    // 한자음 랴, 려, 례, 료, 류, 리 → 야, 여, 예, 요, 유, 이
+    charSplit[0] == "ㄹ" &&
+    (charSplit[1] == "ㅑ" ||
+      charSplit[1] == "ㅕ" ||
+      charSplit[1] == "ㅖ" ||
+      charSplit[1] == "ㅛ" ||
+      charSplit[1] == "ㅠ" ||
+      charSplit[1] == "ㅣ")
+  ) {
+    charSplit[0] = "ㅇ";
+  } else if (
+    // 한자음 라, 래, 로, 뢰, 루, 르 → 나, 내, 노, 뇌, 누, 느
+    charSplit[0] == "ㄹ" &&
+    (charSplit[1] == "ㅏ" ||
+      charSplit[1] == "ㅐ" ||
+      charSplit[1] == "ㅗ" ||
+      (charSplit[1] == "ㅗ" && charSplit[2] == "ㅣ") ||
+      charSplit[1] == "ㅜ" ||
+      charSplit[1] == "ㅡ")
+  ) {
+    charSplit[0] = "ㄴ";
+  }
+  charSplit = Hangul.assemble(charSplit);
+  return charSplit;
+};
+
 // Requests
 app.get("/chat", (req, res) => {
   res.json(chatData);
@@ -128,7 +180,7 @@ app.get("/init", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   // if (req.session.word == null) {
   query(
-    "SELECT _id FROM public.kkutu_ko WHERE CHAR_LENGTH(_id) > 1 AND CHAR_LENGTH(_id) <= 5;"
+    "SELECT _id FROM {tables} WHERE CHAR_LENGTH(_id) > 1 AND CHAR_LENGTH(_id) <= 5;"
   ).then((qres) => {
     if (qres.rowCount >= 1) {
       selectedWord = qres.rows[random(0, qres.rowCount - 1)]["_id"];
@@ -161,40 +213,7 @@ app.post("/answer", (req, res) => {
     if (typeof answer == "string") {
       // 두음 법칙 적용
       let originWord = session.word.charAt(session.word.length - 1);
-      let charSplit = Hangul.disassemble(originWord);
-      if (
-        // 한자음 녀, 뇨, 뉴, 니 → 여, 요, 유, 이
-        charSplit[0] == "ㄴ" &&
-        (charSplit[1] == "ㅕ" ||
-          charSplit[1] == "ㅛ" ||
-          charSplit[1] == "ㅠ" ||
-          charSplit[1] == "ㅣ")
-      ) {
-        charSplit[0] = "ㅇ";
-      } else if (
-        // 한자음 랴, 려, 례, 료, 류, 리 → 야, 여, 예, 요, 유, 이
-        charSplit[0] == "ㄹ" &&
-        (charSplit[1] == "ㅑ" ||
-          charSplit[1] == "ㅕ" ||
-          charSplit[1] == "ㅖ" ||
-          charSplit[1] == "ㅛ" ||
-          charSplit[1] == "ㅠ" ||
-          charSplit[1] == "ㅣ")
-      ) {
-        charSplit[0] = "ㅇ";
-      } else if (
-        // 한자음 라, 래, 로, 뢰, 루, 르 → 나, 내, 노, 뇌, 누, 느
-        charSplit[0] == "ㄹ" &&
-        (charSplit[1] == "ㅏ" ||
-          charSplit[1] == "ㅐ" ||
-          charSplit[1] == "ㅗ" ||
-          (charSplit[1] == "ㅗ" && charSplit[2] == "ㅣ") ||
-          charSplit[1] == "ㅜ" ||
-          charSplit[1] == "ㅡ")
-      ) {
-        charSplit[0] = "ㄴ";
-      }
-      charSplit = Hangul.assemble(charSplit);
+      charSplit = duum(originWord);
 
       // 첫 자 동일 여부
       if (answer.charAt(0) == originWord || answer.charAt(0) == charSplit) {
@@ -202,7 +221,7 @@ app.post("/answer", (req, res) => {
         if (answer in session.used == false) {
           // 단어 존재 여부 체크
           query(
-            "SELECT * FROM public.kkutu_ko WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
+            "SELECT _id FROM {tables} WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
               answer
             )
           ).then((qres) => {
@@ -213,8 +232,9 @@ app.post("/answer", (req, res) => {
 
               // 한 방 단어 체크
               query(
-                "SELECT _id FROM public.kkutu_ko WHERE _id LIKE '{}%' AND CHAR_LENGTH(_id) > 1{};".format(
+                "SELECT _id FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1{};".format(
                   answer.charAt(answer.length - 1),
+                  duum(answer.charAt(answer.length - 1)),
                   usedFilter(session.used)
                 )
               ).then((qres) => {
@@ -229,8 +249,9 @@ app.post("/answer", (req, res) => {
                   for (let ind in qres.rows) {
                     let word = qres.rows[ind]["_id"];
                     let wordCheck = query(
-                      "SELECT _id FROM public.kkutu_ko WHERE _id LIKE '{}%' AND CHAR_LENGTH(_id) > 1 AND _id != '{}'{};".format(
+                      "SELECT _id FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1 AND _id != '{}'{};".format(
                         word.charAt(word.length - 1),
+                        duum(answer.charAt(answer.length - 1)),
                         word,
                         usedFilter(session.used)
                       )

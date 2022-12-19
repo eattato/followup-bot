@@ -53,8 +53,12 @@ const chat = (frame, content) => {
 
 // 기록 남기기
 const usedLog = (frame, content) => {
-  let log = $($.parseHTML("<div class='used_log'></div>"));
-  log.text(content);
+  let log = $(
+    $.parseHTML(
+      "<div class='used_log'><div class='used_main'></div><div class='used_desc'></div></div>"
+    )
+  );
+  log.find(".used_main").text(content);
   frame.prepend(log);
 };
 
