@@ -80,7 +80,10 @@ $().ready(() => {
     .then((res) => res.json())
     .then((data) => {
       if (data.result == true) {
-        input.attr("placeholder", data.word);
+        input.attr(
+          "placeholder",
+          "{} 으로 시작하는 단어를 입력하세요.".format(data.word)
+        );
         session = data;
       } else {
         console.log("refetching..");
@@ -137,7 +140,9 @@ $().ready(() => {
             session = data;
             input.attr(
               "placeholder",
-              session.word.charAt(session.word.length - 1)
+              "{} 으로 시작하는 단어를 입력하세요.".format(
+                session.word.charAt(session.word.length - 1)
+              )
             );
 
             // 봇의 수비 단어를 표시
