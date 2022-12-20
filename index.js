@@ -115,6 +115,9 @@ const usedFilter = (used) => {
   for (let ind in used) {
     let word = used[ind];
     output += " AND _id != '{}'".format(word);
+    if (typeof word.word != "string") {
+      console.log(word);
+    }
   }
   return output;
 };
@@ -205,6 +208,7 @@ const getMeaning = (target) => {
             KRR: "개구리 중사 케로로",
             STA: "스타크래프트",
             DOT: "도타2",
+            WMV: "외국영화",
           };
 
           let tagSplit = target.desc.split(",");
@@ -275,6 +279,11 @@ app.post("/answer", (req, res) => {
 
   if (session.word != null) {
     if (typeof answer == "string") {
+      // 디버깅용 첫 턴 시작글자 맘대로 하는 코드
+      if (session.turn == 0) {
+        session.word = answer.charAt(0);
+      }
+
       // 두음 법칙 적용
       let originWord = session.word.charAt(session.word.length - 1);
       charSplit = duum(originWord);
@@ -301,8 +310,10 @@ app.post("/answer", (req, res) => {
               session.word = answer.charAt(answer.length - 1);
               session.turn += 1;
 
+              console.log("공격: {}".format(answer));
               let answerData = { word: answer, desc: qres.rows[0]["theme"] };
               session.used.push(answerData);
+              console.log(session.used);
               let answerDesc = getMeaning(answerData);
 
               // 한 방 단어 체크
