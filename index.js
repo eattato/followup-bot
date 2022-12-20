@@ -198,6 +198,8 @@ const getMeaning = (target) => {
             HSS: "하스스톤",
             OIJ: "히어로즈 오브 더 스톰",
             MAP: "메이플스토리",
+            OVW: "오버워치",
+            KPO: "유명인",
           };
 
           let tagSplit = target.desc.split(",");
