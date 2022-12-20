@@ -187,7 +187,15 @@ const getMeaning = (target) => {
           let items = res.data.channel.item;
           target.desc = items[0].sense.definition;
         } catch (e) {
-          target.desc = "뜻을 로드하지 못했습니다..";
+          let themeTag = {
+            JAN: "애니메이션",
+            JLN: "라이트노벨",
+          };
+          if (target.desc in themeTag) {
+            target.desc = themeTag[target.desc];
+          } else {
+            target.desc = "뜻을 로드하지 못했습니다..\n{}".format(target.desc);
+          }
         }
         resolve();
       });
@@ -260,7 +268,7 @@ app.post("/answer", (req, res) => {
         if (alreadyUsed == false) {
           // 단어 존재 여부 체크
           query(
-            "SELECT _id, mean FROM {tables} WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
+            "SELECT _id, desc FROM {tables} WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
               answer
             )
           ).then((qres) => {
@@ -268,13 +276,13 @@ app.post("/answer", (req, res) => {
               session.word = answer.charAt(answer.length - 1);
               session.turn += 1;
 
-              let answerData = { word: answer, desc: qres.rows[0]["mean"] };
+              let answerData = { word: answer, desc: qres.rows[0]["desc"] };
               session.used.push(answerData);
               let answerDesc = getMeaning(answerData);
 
               // 한 방 단어 체크
               query(
-                "SELECT _id, mean FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1{};".format(
+                "SELECT _id, desc FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1{};".format(
                   answer.charAt(answer.length - 1),
                   duum(answer.charAt(answer.length - 1)),
                   usedFilter(session.used)
@@ -290,7 +298,7 @@ app.post("/answer", (req, res) => {
                   shuffle(qres.rows);
                   for (let ind in qres.rows) {
                     let word = qres.rows[ind]["_id"];
-                    let desc = qres.rows[ind]["mean"];
+                    let desc = qres.rows[ind]["desc"];
                     let wordCheck = query(
                       "SELECT _id FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1 AND _id != '{}'{};".format(
                         word.charAt(word.length - 1),
