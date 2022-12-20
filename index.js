@@ -189,7 +189,15 @@ const getMeaning = (target) => {
         } catch (e) {
           let themeTag = {
             JAN: "애니메이션",
-            JLN: "라이트노벨",
+            JLN: "라이트 노벨",
+            NEX: "비디오 게임",
+            LOL: "리그 오브 레전드",
+            POK: "포켓몬스터",
+            VOC: "보컬로이드",
+            RAG: "라면/과자",
+            HSS: "하스스톤",
+            OIJ: "히어로즈 오브 더 스톰",
+            MAP: "메이플스토리",
           };
 
           let tagSplit = target.desc.split(",");
@@ -213,13 +221,13 @@ const getMeaning = (target) => {
 };
 
 // Requests
-// app.post("/query", (req, res) => {
-//   query(req.body.query).then((qres) => {
-//     console.log(qres.rows);
-//     console.log(qres.rowCount);
-//     res.send(qres.rows);
-//   });
-// });
+app.post("/query", (req, res) => {
+  query(req.body.query).then((qres) => {
+    console.log(qres.rows);
+    console.log(qres.rowCount);
+    res.send(qres.rows);
+  });
+});
 
 app.get("/chat", (req, res) => {
   res.json(chatData);
