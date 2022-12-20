@@ -387,7 +387,7 @@ app.post("/answer", (req, res) => {
                       used: session.used,
                       turn: session.turn,
                     };
-                    if (attack == null) {
+                    if (wordDatas[attack].count == 0) {
                       resData["chat"] = "finish";
                       resData["chatFirst"] = true;
                     } else if (wordDatas[attack].count <= 30) {
