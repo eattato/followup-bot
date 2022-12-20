@@ -200,6 +200,11 @@ const getMeaning = (target) => {
             MAP: "메이플스토리",
             OVW: "오버워치",
             KPO: "유명인",
+            NSK: "니세코이",
+            DGM: "디지몬",
+            KRR: "개구리 중사 케로로",
+            STA: "스타크래프트",
+            DOT: "도타2",
           };
 
           let tagSplit = target.desc.split(",");
