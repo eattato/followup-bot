@@ -191,10 +191,20 @@ const getMeaning = (target) => {
             JAN: "애니메이션",
             JLN: "라이트노벨",
           };
-          if (target.desc in themeTag) {
-            target.desc = themeTag[target.desc];
-          } else {
+
+          let tagSplit = target.desc.split(",");
+          let tags = [];
+          for (let ind in tagSplit) {
+            let tag = tagSplit[ind];
+            if (tag in themeTag) {
+              tags.push(themeTag[tag]);
+            }
+          }
+
+          if (tags.length == 0) {
             target.desc = "뜻을 로드하지 못했습니다..\n{}".format(target.desc);
+          } else {
+            target.desc = tags.join(", ");
           }
         }
         resolve();
