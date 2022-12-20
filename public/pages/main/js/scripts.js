@@ -107,107 +107,132 @@ $().ready(() => {
       chat(botChatFrame, chatData.start[random(0, chatData.start.length)]);
     });
 
+  let dead = false;
   // 서버로 입력 전송
   const answer = (content) => {
-    input.val("");
-    fetch(url + "/answer", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        answer: content,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        // 입력 결과 (봇의 수비 결과)
-        if (data.result == true) {
-          // 오류 없으면 자신의 공격 단어 표시
-          chat(userChatFrame, content);
+    if (dead == false) {
+      if (content == "gg" || content == "GG") {
+        dead = true;
+        setTimeout(() => {
+          chat(botChatFrame, chatData.win[random(0, chatData.lose.length - 1)]);
+        }, 500);
 
-          for (let ind in data.used) {
-            let usedData = data.used[ind];
-            if (content == usedData.word) {
-              usedLog(logFrame, usedData, "user");
-              break;
-            }
-          }
+        setTimeout(() => {
+          alert(
+            "당신이 패배했습니다!\n{}턴에 걸쳐 패배!\n확인을 누르면 다시 플레이합니다.".format(
+              session.turn
+            )
+          );
+          window.location.href = window.location.href;
+        }, 2000);
+      } else {
+        input.val("");
+        fetch(url + "/answer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            answer: content,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            // 입력 결과 (봇의 수비 결과)
+            if (data.result == true) {
+              // 오류 없으면 자신의 공격 단어 표시
+              chat(userChatFrame, content);
 
-          // 봇이 공격을 수비했음
-          if (data.word != "victory") {
-            // 세션 데이터 새로고침
-            session = data;
-            input.attr(
-              "placeholder",
-              "{} 으로 시작하는 단어를 입력하세요.".format(
-                session.word.charAt(session.word.length - 1)
-              )
-            );
-
-            // 봇의 수비 단어를 표시
-            setTimeout(() => {
-              chat(botChatFrame, data.word);
               for (let ind in data.used) {
                 let usedData = data.used[ind];
-                if (data.word == usedData.word) {
-                  usedLog(logFrame, usedData, "bot");
+                if (content == usedData.word) {
+                  usedLog(logFrame, usedData, "user");
                   break;
                 }
               }
-            }, 500);
 
-            if (data.chat != null) {
-              let chatDelay = 750;
-              if (data.chatFirst == true) {
-                chatDelay = 250;
+              // 봇이 공격을 수비했음
+              if (data.word != "victory") {
+                // 세션 데이터 새로고침
+                session = data;
+                input.attr(
+                  "placeholder",
+                  "{} 으로 시작하는 단어를 입력하세요.".format(
+                    session.word.charAt(session.word.length - 1)
+                  )
+                );
+
+                // 봇의 수비 단어를 표시
+                setTimeout(() => {
+                  chat(botChatFrame, data.word);
+                  for (let ind in data.used) {
+                    let usedData = data.used[ind];
+                    if (data.word == usedData.word) {
+                      usedLog(logFrame, usedData, "bot");
+                      break;
+                    }
+                  }
+                }, 500);
+
+                if (data.chat != null) {
+                  let chatDelay = 750;
+                  if (data.chatFirst == true) {
+                    chatDelay = 250;
+                  }
+                  setTimeout(() => {
+                    chatList = chatData[data.chat];
+                    chat(
+                      botChatFrame,
+                      chatList[random(0, chatList.length - 1)]
+                    );
+                  }, chatDelay);
+                }
+              } else {
+                // 유저 승리
+                setTimeout(() => {
+                  chat(
+                    botChatFrame,
+                    chatData.lose[random(0, chatData.lose.length - 1)]
+                  );
+                }, 500);
+
+                setTimeout(() => {
+                  alert(
+                    "당신이 승리했습니다!\n{}턴에 걸쳐 승리!\n다시 플레이하려면 새로고침을 누르세요.".format(
+                      session.turn
+                    )
+                  );
+                }, 2000);
               }
-              setTimeout(() => {
-                chatList = chatData[data.chat];
-                chat(botChatFrame, chatList[random(0, chatList.length - 1)]);
-              }, chatDelay);
+            } else {
+              // 오류 발생
+              if (data.error == "not same start") {
+                chat(
+                  userChatFrame,
+                  '시작 단어는 "{}" 입니다!'.format(
+                    session.word.charAt(session.word.length - 1)
+                  )
+                );
+              } else if (data.error == "already used") {
+                chat(
+                  userChatFrame,
+                  '"{}"는 이미 사용된 단어입니다!'.format(content)
+                );
+              } else if (data.error == "no such word") {
+                chat(
+                  userChatFrame,
+                  '"{}"라는 단어는 존재하지 않습니다!'.format(content)
+                );
+              } else if (data.error == "no kill word in first") {
+                chat(
+                  userChatFrame,
+                  "첫 턴부터 한 방 단어를 사용할 수 없습니다!"
+                );
+              }
             }
-          } else {
-            // 유저 승리
-            setTimeout(() => {
-              chat(
-                botChatFrame,
-                chatData.lose[random(0, chatData.lose.length - 1)]
-              );
-            }, 500);
-
-            setTimeout(() => {
-              alert(
-                "당신이 승리했습니다!\n{}턴에 걸쳐 승리!\n다시 플레이하려면 새로고침을 누르세요.".format(
-                  session.turn
-                )
-              );
-            }, 2000);
-          }
-        } else {
-          // 오류 발생
-          if (data.error == "not same start") {
-            chat(
-              userChatFrame,
-              '시작 단어는 "{}" 입니다!'.format(
-                session.word.charAt(session.word.length - 1)
-              )
-            );
-          } else if (data.error == "already used") {
-            chat(
-              userChatFrame,
-              '"{}"는 이미 사용된 단어입니다!'.format(content)
-            );
-          } else if (data.error == "no such word") {
-            chat(
-              userChatFrame,
-              '"{}"라는 단어는 존재하지 않습니다!'.format(content)
-            );
-          } else if (data.error == "no kill word in first") {
-            chat(userChatFrame, "첫 턴부터 한 방 단어를 사용할 수 없습니다!");
-          }
-        }
-      });
+          });
+      }
+    }
   };
 
   let button = $(".input_frame button");
