@@ -221,13 +221,13 @@ const getMeaning = (target) => {
 };
 
 // Requests
-app.post("/query", (req, res) => {
-  query(req.body.query).then((qres) => {
-    console.log(qres.rows);
-    console.log(qres.rowCount);
-    res.send(qres.rows);
-  });
-});
+// app.post("/query", (req, res) => {
+//   query(req.body.query).then((qres) => {
+//     console.log(qres.rows);
+//     console.log(qres.rowCount);
+//     res.send(qres.rows);
+//   });
+// });
 
 app.get("/chat", (req, res) => {
   res.json(chatData);
