@@ -268,7 +268,7 @@ app.post("/answer", (req, res) => {
         if (alreadyUsed == false) {
           // 단어 존재 여부 체크
           query(
-            "SELECT _id, desc FROM {tables} WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
+            "SELECT _id, theme FROM {tables} WHERE _id = '{}' AND CHAR_LENGTH(_id) > 1;".format(
               answer
             )
           ).then((qres) => {
@@ -276,13 +276,13 @@ app.post("/answer", (req, res) => {
               session.word = answer.charAt(answer.length - 1);
               session.turn += 1;
 
-              let answerData = { word: answer, desc: qres.rows[0]["desc"] };
+              let answerData = { word: answer, desc: qres.rows[0]["theme"] };
               session.used.push(answerData);
               let answerDesc = getMeaning(answerData);
 
               // 한 방 단어 체크
               query(
-                "SELECT _id, desc FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1{};".format(
+                "SELECT _id, theme FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1{};".format(
                   answer.charAt(answer.length - 1),
                   duum(answer.charAt(answer.length - 1)),
                   usedFilter(session.used)
@@ -298,7 +298,7 @@ app.post("/answer", (req, res) => {
                   shuffle(qres.rows);
                   for (let ind in qres.rows) {
                     let word = qres.rows[ind]["_id"];
-                    let desc = qres.rows[ind]["desc"];
+                    let desc = qres.rows[ind]["theme"];
                     let wordCheck = query(
                       "SELECT _id FROM {tables} WHERE (_id LIKE '{}%' OR _id LIKE '{}%') AND CHAR_LENGTH(_id) > 1 AND _id != '{}'{};".format(
                         word.charAt(word.length - 1),
