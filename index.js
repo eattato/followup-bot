@@ -134,6 +134,8 @@ app.post("/answer", (req, res) => {
 
     // 받고 봇으로 답장
     agent.getPick().then((agentRes) => {
+      user.updateCurrent(agentRes);
+      agent.updateCurrent(agentRes);
       data.turn = "user"
       // console.log(`user ${id} 에 대한 봇의 응답: ${agentRes}`)
       res.json({ result: true, param: agentRes });
