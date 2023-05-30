@@ -60,10 +60,25 @@ app.get("/init", (req, res) => {
   });
 });
 
+app.post("/weight", (req, res) => {
+  let word = req.body.word;
+  if (typeof word == "string") {
+    kkutu.query(`SELECT weight FROM public.kkutu_ko WHERE _id = '${word}';`)
+    .then((rows) => {
+      if (rows.length >= 1) {
+        console.log(rows);
+        res.send("OK");
+      }
+    });
+  } else {
+    res.json("NO U");
+  }
+})
+
 app.post("/answer", (req, res) => {
   let id = req.session.uuid;
   let word = req.body.word;
-  console.log(`user ${id} 채팅 전송: ${word}`);
+  // console.log(`user ${id} 채팅 전송: ${word}`);
   if (!id || !userDatas[id]) {
     res.json({ result: false, reason: "등록되지 않은 유저입니다." });
     return;
@@ -108,10 +123,19 @@ app.post("/answer", (req, res) => {
     user.updateCurrent(word);
     agent.updateCurrent(word);
 
+    kkutu.hanbang(word).then((hanbang) => {
+      if (!hanbang) {
+        console.log(`${word}의 가중치값을 증가시킵니다.`);
+        kkutu.updateWeight(word, 10);
+      } else {
+        console.log(`${word}는 한방단어 이므로 가중치를 증가시키지 않았습니다.`);
+      }
+    })
+
     // 받고 봇으로 답장
     agent.getPick().then((agentRes) => {
       data.turn = "user"
-      console.log(`user ${id} 에 대한 봇의 응답: ${agentRes}`)
+      // console.log(`user ${id} 에 대한 봇의 응답: ${agentRes}`)
       res.json({ result: true, param: agentRes });
     })
   })
@@ -181,7 +205,7 @@ app.post("/meaning", (req, res) => {
               }
             })
           } catch (e) {
-            console.log(`뜻을 찾을 수 없습니다. - ${word}, ${word.theme}`)
+            // console.log(`뜻을 찾을 수 없습니다. - ${word}, ${word.theme}`)
             res.json({
               result: true,
               param: {
@@ -192,7 +216,7 @@ app.post("/meaning", (req, res) => {
           }
         })
       } catch (e) {
-        console.log(`뜻을 로드하던 중 에러가 발생했습니다. - ${word}, ${word.theme}`)
+        // console.log(`뜻을 로드하던 중 에러가 발생했습니다. - ${word}, ${word.theme}`)
         res.json({
           result: true,
           param: {

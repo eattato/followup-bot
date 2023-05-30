@@ -47,17 +47,17 @@ const KkutuQuery = class {
   /**
    * 해당 글자로 시작하는 단어 목록 주는 메소드
    * @param {String} start 해당 글자로 시작함
-   * @returns {Promise} 단어 목록 리턴하는 Promise 객체
+   * @returns {Promise} 단어 rows 리턴하는 Promise 객체
    */
   dictionary(start) {
     let alt = duum(start);
     let altCondition = start != alt ? `OR _id LIKE '${alt}%'` : "";
 
-    const queryStr = `SELECT _id FROM ${this.tables} WHERE _id LIKE '${start}%' ${altCondition} AND CHAR_LENGTH(_id) > 1;`;
+    const queryStr = `SELECT * FROM ${this.tables} WHERE _id LIKE '${start}%' ${altCondition} AND CHAR_LENGTH(_id) > 1;`;
     return new Promise((resolve, reject) => {
       this.query(queryStr)
         .then((res) => {
-          res = res.map((v) => v["_id"]);
+          // res = res.map((v) => v["_id"]);
           resolve(res);
         })
         .catch((e) => {
@@ -96,13 +96,8 @@ const KkutuQuery = class {
     return new Promise((resolve, reject) => {
       this.dictionary(word)
         .then((res) => {
-          if (res.length >= 1) {
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        })
-        .catch((e) => {
+          resolve(res.length == 0);
+        }).catch((e) => {
           reject(e);
         });
     });
@@ -145,6 +140,17 @@ const KkutuQuery = class {
         });
     });
   }
+
+  /**
+   * 해당 단어의 가중치 값을 업데이트함
+   * @param {String} word 변화 시킬 단어
+   * @param {number} weight 가중치 변화값
+   */
+  updateWeight(word, weight) {
+    weight = weight > 0 ? `+ ${weight}` : `- ${-weight}`;
+    const queryStr = `UPDATE ${this.tables} SET weight = weight ${weight} WHERE _id = '${word}';`
+    this.query(queryStr);
+  }
 };
 
 const KkutuUser = class {
@@ -173,7 +179,7 @@ const KkutuUser = class {
         // 이미 쓴 단어 제거
         let used = this.used;
         words = words.reduce((arr, c) => {
-          if (used.includes(c)) return arr;
+          if (used.includes(c["_id"])) return arr;
           else {
             arr.push(c);
             return arr;
@@ -212,26 +218,30 @@ const Agent = class extends KkutuUser {
    */
   getPick() {
     return new Promise((resolve, reject) => {
-      this.getUsableWords().then((words) => {
-        if (words.length >= 1) {
+      this.getUsableWords().then((wordDatas) => {
+        if (wordDatas.length >= 1) {
           // 가중치 테이블 생성
-          let weightTable = [];
-          for (let i in words) {
-            let word = words[i];
-            if (this.weights[word]) {
-              weightTable.push(this.weights[word]);
-            } else {
-              weightTable.push(1);
-            } // 쓰이지 않은 단어 = 가중치 1
+          let words = [];
+          let weights = [];
+          for (let i in wordDatas) {
+            let wordData = wordDatas[i];
+            let word = wordData["_id"];
+            let weight = wordData.weight;
+
+            words.push(word);
+            weight = weight == 0 ? 1 : weight;
+            weights.push(weight);
           }
+          // console.log(words);
+          // console.log(weights);
 
           // 가중치 기반 랜덤
-          let sum = weightTable.reduce((a, c) => a + c, 0);
+          let sum = weights.reduce((a, c) => a + c, 0);
           let rand = Math.floor(Math.random() * sum) + 1; // 1 ~ sum
 
           // 해당 범위 내에 들어가면, 예: 5, 2, 3 = 10인 상태에서 rand 9 => 9 - 5 = 4, 그럼 첫번째인거임
           resolve(
-            weightTable.reduce((a, c, i) => {
+            weights.reduce((a, c, i) => {
               sum -= c;
               if (!a) return sum <= rand ? words[i] : null;
               else return a; // 이미 값을 구했으면 값 계속 리턴
