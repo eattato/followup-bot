@@ -126,7 +126,7 @@ app.post("/answer", (req, res) => {
     kkutu.hanbang(word).then((hanbang) => {
       if (!hanbang) {
         console.log(`${word}의 가중치값을 증가시킵니다.`);
-        kkutu.updateWeight(word, 10);
+        // kkutu.updateWeight(word, 10);
       } else {
         console.log(`${word}는 한방단어 이므로 가중치를 증가시키지 않았습니다.`);
       }

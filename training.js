@@ -17,6 +17,11 @@ kkutu.connection
         let agents = [new Agent(kkutu), new Agent(kkutu)];
         console.log(`시작단어: '${startWord}'`);
 
+        let usages = {
+            0: [],
+            1: []
+        }
+
         agents.forEach((agent) => {
             agent.updateCurrent(startWord);
         });
@@ -32,23 +37,33 @@ kkutu.connection
                 let alt = duum(wordStart);
                 let altText = wordStart != alt ? `(${alt})` : "";
 
+                usages[turn].push(word);
                 console.log(`agent ${turn}: ${word}${altText}`);
                 agents.forEach((agent) => {
                     agent.updateCurrent(word);
-                    agent.used.push(word);
+                    //agent.used.push(word);
                 });
             } else { // 게임 끝
-                console.log(`agent ${Number(!turn)}의 승리!`);
-
-                // 가중치 저장 & 초기화
-                let winnerUses = agents[Number(!turn)].used;
-                let loserUses = agent.used;
-                agents.forEach((agent) => {
-                    agent.updateWeight(winnerUses, 1);
-                    agent.updateWeight(loserUses, -1);
-                    agent.used = [];
+                // 한방단어로 죽으면 해당 패인인 단어 가중치 감소
+                let deathReasonWord = agent.used[agent.used.length - 2];
+                let deathWord = agent.used[agent.used.length - 1];
+                console.log(`패인: '${deathReasonWord}'`);
+                kkutu.hanbang(deathWord)
+                .then((hanbang) => {
+                    if (hanbang) {
+                        // console.log(`${deathReasonWord}의 가중치값을 감소시킵니다.`);
+                        kkutu.updateWeight(deathReasonWord, -300);
+                    }
                 });
 
+                // 이긴 쪽 단어 전부 가중치 증가
+                let winWords = usages[Number(!turn)];
+                usages = { 0: [], 1: [] };
+                for (let i in winWords) {
+                    kkutu.updateWeight(winWords[i], 10);
+                }
+
+                console.log(`agent ${Number(!turn)}의 승리!`); 
                 break;
             }
         }

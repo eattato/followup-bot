@@ -53,7 +53,7 @@ const KkutuQuery = class {
     let alt = duum(start);
     let altCondition = start != alt ? `OR _id LIKE '${alt}%'` : "";
 
-    const queryStr = `SELECT * FROM ${this.tables} WHERE _id LIKE '${start}%' ${altCondition} AND CHAR_LENGTH(_id) > 1;`;
+    const queryStr = `SELECT * FROM ${this.tables} WHERE (_id LIKE '${start}%' ${altCondition}) AND CHAR_LENGTH(_id) > 1;`;
     return new Promise((resolve, reject) => {
       this.query(queryStr)
         .then((res) => {
@@ -148,8 +148,8 @@ const KkutuQuery = class {
    */
   updateWeight(word, weight) {
     weight = weight > 0 ? `+ ${weight}` : `- ${-weight}`;
-    const queryStr = `UPDATE ${this.tables} SET weight = weight ${weight} WHERE _id = '${word}';`
-    this.query(queryStr);
+    const queryStr = `UPDATE ${this.tables} SET weight = GREATEST(1, weight ${weight}) WHERE _id = '${word}';`
+    return this.query(queryStr);
   }
 };
 

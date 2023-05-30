@@ -4,7 +4,8 @@ const readline = require("readline");
 
 let paths = [
     "Resources/attack.txt",
-    "Resources/defense.txt"
+    "Resources/defense.txt",
+    "Resources/hanbang.txt",
 ]
 
 const kkutu = new KkutuQuery("././config/db.json"); // DB 로드
@@ -23,8 +24,10 @@ kkutu.connection.then(() => {
                 tags.push(split[i]);
             }
 
-            if (!tags.includes("어인정") && !tags.includes("한방")) {
-                kkutu.updateWeight(word, 500);
+            if (!tags.includes("어인정")) {
+                // 한방 방어를 위해 기회만 되면 한방을 많이 쓰게함
+                let query = tags.includes("한방") ? kkutu.updateWeight(word, 3000) : kkutu.updateWeight(word, 500);
+                query.then(() => {console.log(`query done ${word}`)})
                 console.log(word);
             }
         });
