@@ -49,11 +49,14 @@ const KkutuQuery = class {
    * @param {String} start 해당 글자로 시작함
    * @returns {Promise} 단어 rows 리턴하는 Promise 객체
    */
-  dictionary(start) {
+  dictionary(start, hanbangFilter) {
     let alt = duum(start);
     let altCondition = start != alt ? `OR _id LIKE '${alt}%'` : "";
 
-    const queryStr = `SELECT * FROM ${this.tables} WHERE (_id LIKE '${start}%' ${altCondition}) AND CHAR_LENGTH(_id) > 1;`;
+    let filter = hanbangFilter ? `AND EXISTS (SELECT 1 FROM ${this.tables} AS sub `
+      + `WHERE sub._id LIKE CONCAT('%', SUBSTRING(${this.tables}._id, LENGTH(${this.tables}._id), 1)))` : "";
+
+    const queryStr = `SELECT * FROM ${this.tables} WHERE (_id LIKE '${start}%' ${altCondition}) AND CHAR_LENGTH(_id) > 1 ${filter};`;
     return new Promise((resolve, reject) => {
       this.query(queryStr)
         .then((res) => {
@@ -148,7 +151,17 @@ const KkutuQuery = class {
    */
   updateWeight(word, weight) {
     weight = weight > 0 ? `+ ${weight}` : `- ${-weight}`;
-    const queryStr = `UPDATE ${this.tables} SET weight = GREATEST(1, weight ${weight}) WHERE _id = '${word}';`
+    const queryStr = `UPDATE ${this.tables} SET weight = GREATEST(0, weight ${weight}) WHERE _id = '${word}';`
+    return this.query(queryStr);
+  }
+
+  /**
+   * 해당 단어의 가중치 값을 업데이트함
+   * @param {String} word 변화 시킬 단어
+   * @param {number} weight 가중치 값
+   */
+  setWeight(word, weight) {
+    const queryStr = `UPDATE ${this.tables} SET weight = GREATEST(0, ${weight}) WHERE _id = '${word}';`
     return this.query(queryStr);
   }
 };
@@ -173,9 +186,9 @@ const KkutuUser = class {
    * 낼 수 있는 단어 목록을 가져오는 함수
    * @returns {Promise} 사용한 것을 제외해 사용 가능한 단어 목록을 리턴하는 Promise 객체
    */
-  getUsableWords() {
+  getUsableWords(hanbangFilter) {
     return new Promise((resolve, reject) => {
-      this.db.dictionary(this.current).then((words) => {
+      this.db.dictionary(this.current, hanbangFilter).then((words) => {
         // 이미 쓴 단어 제거
         let used = this.used;
         words = words.reduce((arr, c) => {
@@ -194,60 +207,33 @@ const KkutuUser = class {
 const Agent = class extends KkutuUser {
   constructor(db) {
     super(db);
-    this.weights = {}; // 단어 가중치
-  }
-
-  /**
-   * 단어 가중치 목록을 업데이트함
-   * @param {[String]} words 업데이트할 가중치 목록
-   * @param {number} value 가중치에 추가할 값
-   */
-  updateWeight(words, value) {
-    for (let i in words) {
-      let word = words[i];
-      if (!this.weights[word]) {
-        this.weights[word] = 1;
-      }
-      this.weights[word] += value;
-    }
   }
 
   /**
    * 현재 단어를 기반으로 사용할 단어를 리턴
    * @returns {String} 사용할 단어
    */
-  getPick() {
+  getPick(hanbangFilter) {
     return new Promise((resolve, reject) => {
-      this.getUsableWords().then((wordDatas) => {
+      this.getUsableWords(hanbangFilter).then((wordDatas) => {
         if (wordDatas.length >= 1) {
-          // 가중치 테이블 생성
-          let words = [];
-          let weights = [];
+          // 가중치 수집
+          let weights = {};
           for (let i in wordDatas) {
             let wordData = wordDatas[i];
-            let word = wordData["_id"];
             let weight = wordData.weight;
-
-            words.push(word);
-            weight = weight == 0 ? 1 : weight;
-            weights.push(weight);
+            if (!weights[weight]) weights[weight] = [];
+            weights[weight].push(wordData["_id"]);
           }
-          // console.log(words);
-          // console.log(weights);
 
-          // 가중치 기반 랜덤
-          let sum = weights.reduce((a, c) => a + c, 0);
-          let rand = Math.floor(Math.random() * sum) + 1; // 1 ~ sum
-
-          // 해당 범위 내에 들어가면, 예: 5, 2, 3 = 10인 상태에서 rand 9 => 9 - 5 = 4, 그럼 첫번째인거임
-          resolve(
-            weights.reduce((a, c, i) => {
-              sum -= c;
-              if (!a) return sum <= rand ? words[i] : null;
-              else return a; // 이미 값을 구했으면 값 계속 리턴
-            }, null)
-          );
-        } else resolve("gg");
+          // 단어 목록 중 가장 가중치 높은 단어에서 랜덤으로 리턴
+          const max = Object.keys(weights)
+            .reduce((a, c) => a < Number(c) ? Number(c) : a, 0);
+          let maxWeights = weights[max];
+          resolve(maxWeights[Math.floor(Math.random() * maxWeights.length)]);
+        } else {
+          resolve("gg")
+        }
       });
     });
   }
