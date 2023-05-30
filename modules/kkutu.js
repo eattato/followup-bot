@@ -5,6 +5,7 @@ const { Client } = require("pg");
 const KkutuQuery = class {
   constructor(configPath) {
     this.connected = false;
+    this.tables = "public.kkutu_ko";
 
     // DB 연결
     this.connection = new Promise((resolve, reject) => {
@@ -52,12 +53,32 @@ const KkutuQuery = class {
     let alt = duum(start);
     let altCondition = start != alt ? `OR _id LIKE '${alt}%'` : "";
 
-    const queryStr = `SELECT _id FROM public.kkutu_ko WHERE _id LIKE '${start}%' ${altCondition} AND CHAR_LENGTH(_id) > 1;`;
+    const queryStr = `SELECT _id FROM ${this.tables} WHERE _id LIKE '${start}%' ${altCondition} AND CHAR_LENGTH(_id) > 1;`;
     return new Promise((resolve, reject) => {
       this.query(queryStr)
         .then((res) => {
           res = res.map((v) => v["_id"]);
           resolve(res);
+        })
+        .catch((e) => {
+          reject(e);
+        });
+    });
+  }
+
+  /**
+   * 해당 단어 정보 주는 메소드
+   * @param {String} word 조회할 단어
+   * @returns {Promise} 단어 정보 리턴하는 Promise 객체
+   */
+  getWordInfo(word) {
+    const queryStr = `SELECT _id, theme FROM ${this.tables} WHERE _id = '${word}' AND CHAR_LENGTH(_id) > 1;`;
+    return new Promise((resolve, reject) => {
+      this.query(queryStr)
+        .then((res) => {
+          let info = res[0];
+          if (info) resolve(info);
+          else resolve(null);
         })
         .catch((e) => {
           reject(e);
@@ -93,7 +114,7 @@ const KkutuQuery = class {
    */
   initWord() {
     let queryStr =
-      "SELECT _id FROM public.kkutu_ko WHERE CHAR_LENGTH(_id) > 1 AND CHAR_LENGTH(_id) <= 5;";
+      `SELECT _id FROM ${this.tables} WHERE CHAR_LENGTH(_id) > 1 AND CHAR_LENGTH(_id) <= 5;`;
     return new Promise((resolve, reject) => {
       this.query(queryStr)
         .then((res) => {
@@ -112,7 +133,7 @@ const KkutuQuery = class {
    * @returns {Promise} bool리턴하는 Promise 객체
    */
   exists(word) {
-    const queryStr = `SELECT _id FROM public.kkutu_ko WHERE _id = '${word}' AND CHAR_LENGTH(_id) > 1;`;
+    const queryStr = `SELECT _id FROM ${this.tables} WHERE _id = '${word}' AND CHAR_LENGTH(_id) > 1;`;
     return new Promise((resolve, reject) => {
       this.query(queryStr)
         .then((res) => {
@@ -150,8 +171,9 @@ const KkutuUser = class {
     return new Promise((resolve, reject) => {
       this.db.dictionary(this.current).then((words) => {
         // 이미 쓴 단어 제거
+        let used = this.used;
         words = words.reduce((arr, c) => {
-          if (this.used.includes(c)) return arr;
+          if (used.includes(c)) return arr;
           else {
             arr.push(c);
             return arr;

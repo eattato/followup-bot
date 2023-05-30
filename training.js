@@ -9,7 +9,10 @@ kkutu.connection
     console.log("DB 로드됨");
 
     // 경기 무한 반복
+    let round = 0;
     while (true) {
+        round++;
+        console.log(`round ${round}`);
         let startWord = await kkutu.initWord();
         let agents = [new Agent(kkutu), new Agent(kkutu)];
         console.log(`시작단어: '${startWord}'`);

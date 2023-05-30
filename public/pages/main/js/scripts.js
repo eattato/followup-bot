@@ -1,12 +1,4 @@
-const url = "http://localhost:8887";
-
-String.prototype.format = function () {
-  var result = this;
-  for (let ind in arguments) {
-    result = result.replace("{}", arguments[ind]);
-  }
-  return result;
-};
+const url = `${window.location.protocol}//${window.location.host}`;
 
 // min ~ max 까지의 랜덤 값을 리턴
 const random = (min, max) => {
@@ -52,24 +44,26 @@ const chat = (frame, content) => {
 };
 
 // 기록 남기기
-const usedLog = (frame, data, who) => {
+const usedLog = (frame, res, who) => {
   let log = $(
     $.parseHTML(
       "<div class='used_log'><div class='used_main'></div><div class='used_desc'></div></div>"
     )
   );
-  log.find(".used_main").text(data.word);
-  log.find(".used_desc").text(data.desc);
+  log.find(".used_main").text(res.param.word);
+  log.find(".used_desc").text(res.param.desc);
   if (who != null) {
     log.addClass(who);
   }
   frame.prepend(log);
 };
 
+// 메인
 $().ready(() => {
   let session = null;
   let input = $(".input_frame input");
   let logFrame = $(".used_list");
+
   // 유저 세션 가져오기
   fetch(url + "/init", {
     method: "GET",
@@ -78,22 +72,18 @@ $().ready(() => {
     },
   })
     .then((res) => res.json())
-    .then((data) => {
-      if (data.result == true) {
-        input.attr(
-          "placeholder",
-          "{} 으로 시작하는 단어를 입력하세요.".format(data.word)
-        );
-        session = data;
-      } else {
-        console.log("refetching..");
-      }
+    .then((res) => {
+      if (res.result == false) alert(res.reason);
+      input.attr(
+        "placeholder",
+        `${res.param.charAt(res.param.length - 1)} 으로 시작하는 단어를 입력하세요.`
+      );
     });
 
   // 봇 대화 데이터 로드
   let botChatFrame = $(".face_frame.bot .chat_main");
   let userChatFrame = $(".face_frame.user .chat_main");
-  chatData = null;
+  chatres = null;
   fetch(url + "/resource/chat.json", {
     method: "GET",
     headers: {
@@ -102,136 +92,92 @@ $().ready(() => {
     },
   })
     .then((res) => res.json())
-    .then((data) => {
-      chatData = data;
-      chat(botChatFrame, chatData.start[random(0, chatData.start.length)]);
+    .then((res) => {
+      chatres = res;
+      chat(botChatFrame, chatres.start[random(0, chatres.start.length)]);
     });
 
+  // 뜻 조회하는 함수
+  const getMeaning = (word, who) => {
+    fetch(`${url}/meaning`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        word: word
+      })
+    }).then((res) => res.json())
+    .then((res) => {
+      if (res.result) {
+        usedLog(logFrame, res, who);
+      }
+    })
+  }
+
+  let canFetch = true;
   let dead = false;
   // 서버로 입력 전송
   const answer = (content) => {
-    if (dead == false) {
-      if (content == "gg" || content == "GG") {
-        dead = true;
-        setTimeout(() => {
-          chat(botChatFrame, chatData.win[random(0, chatData.lose.length - 1)]);
-        }, 500);
+    if (dead) return;
+    if (!canFetch) return;
+    canFetch = false;
 
-        setTimeout(() => {
-          alert(
-            "당신이 패배했습니다!\n{}턴에 걸쳐 패배!\n확인을 누르면 다시 플레이합니다.".format(
-              session.turn
-            )
-          );
-          window.location.href = window.location.href;
-        }, 2000);
-      } else {
-        input.val("");
-        fetch(url + "/answer", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            answer: content,
-          }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            // 입력 결과 (봇의 수비 결과)
-            if (data.result == true) {
-              // 오류 없으면 자신의 공격 단어 표시
-              chat(userChatFrame, content);
+    // 항복
+    if (content == "gg" || content == "GG") {
+      dead = true;
+      setTimeout(() => {
+        chat(botChatFrame, chatres.win[random(0, chatres.win.length - 1)]);
+      }, 500);
 
-              for (let ind in data.used) {
-                let usedData = data.used[ind];
-                if (content == usedData.word) {
-                  usedLog(logFrame, usedData, "user");
-                  break;
-                }
-              }
+      setTimeout(() => {
+        alert(`당신이 패배했습니다!\n{}턴에 걸쳐 패배!\n확인을 누르면 다시 플레이합니다.`);
+        window.location.href = window.location.href;
+      }, 2000);
+    } else { // 입력
+      input.val("");
+      fetch(url + "/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          word: content,
+        }),
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          if (res.result == false) { canFetch = true; alert(res.reason); return; }
+          let word = res.param;
 
-              // 봇이 공격을 수비했음
-              if (data.word != "victory") {
-                // 세션 데이터 새로고침
-                session = data;
-                input.attr(
-                  "placeholder",
-                  "{} 으로 시작하는 단어를 입력하세요.".format(
-                    session.word.charAt(session.word.length - 1)
-                  )
-                );
+          chat(userChatFrame, content);
+          getMeaning(content, "user");
 
-                // 봇의 수비 단어를 표시
-                setTimeout(() => {
-                  chat(botChatFrame, data.word);
-                  for (let ind in data.used) {
-                    let usedData = data.used[ind];
-                    if (data.word == usedData.word) {
-                      usedLog(logFrame, usedData, "bot");
-                      break;
-                    }
-                  }
-                }, 500);
+          // 봇의 수비 단어를 표시
+          setTimeout(() => {
+            chat(botChatFrame, word);
+            getMeaning(word, "bot");
+            input.attr(
+              "placeholder",
+              `${word.charAt(word.length - 1)} 으로 시작하는 단어를 입력하세요.`
+            );
+            canFetch = true;
 
-                if (data.chat != null) {
-                  let chatDelay = 750;
-                  if (data.chatFirst == true) {
-                    chatDelay = 250;
-                  }
-                  setTimeout(() => {
-                    chatList = chatData[data.chat];
-                    chat(
-                      botChatFrame,
-                      chatList[random(0, chatList.length - 1)]
-                    );
-                  }, chatDelay);
-                }
-              } else {
-                // 유저 승리
-                setTimeout(() => {
-                  chat(
-                    botChatFrame,
-                    chatData.lose[random(0, chatData.lose.length - 1)]
-                  );
-                }, 500);
+            // 봇 패배
+            if (res.param == "gg") {
+              dead = true;
 
-                setTimeout(() => {
-                  alert(
-                    "당신이 승리했습니다!\n{}턴에 걸쳐 승리!\n다시 플레이하려면 새로고침을 누르세요.".format(
-                      session.turn
-                    )
-                  );
-                }, 2000);
-              }
-            } else {
-              // 오류 발생
-              if (data.error == "not same start") {
-                chat(
-                  userChatFrame,
-                  '시작 단어는 "{}" 입니다!'.format(
-                    session.word.charAt(session.word.length - 1)
-                  )
-                );
-              } else if (data.error == "already used") {
-                chat(
-                  userChatFrame,
-                  '"{}"는 이미 사용된 단어입니다!'.format(content)
-                );
-              } else if (data.error == "no such word") {
-                chat(
-                  userChatFrame,
-                  '"{}"라는 단어는 존재하지 않습니다!'.format(content)
-                );
-              } else if (data.error == "no kill word in first") {
-                chat(
-                  userChatFrame,
-                  "첫 턴부터 한 방 단어를 사용할 수 없습니다!"
-                );
-              }
+              setTimeout(() => {
+                chat(botChatFrame, chatres.lose[random(0, chatres.lose.length - 1)]);
+              }, 500);
+
+              setTimeout(() => {
+                alert(`당신이 승리했습니다!\n{}턴에 걸쳐 승리!\n확인을 눌러 재시작합니다.`);
+                window.href = `${url}/main`;
+              }, 1000);
             }
-          });
-      }
+          }, 500);
+        });
     }
   };
 
