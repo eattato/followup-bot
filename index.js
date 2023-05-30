@@ -53,7 +53,8 @@ app.get("/init", (req, res) => {
     userDatas[id] = {
       user: user,
       agent: agent,
-      turn: "user"
+      turn: "user",
+      turnPassed: 0
     }
     res.json({ result: true, param: word });
   });
@@ -83,7 +84,15 @@ app.post("/answer", (req, res) => {
   data.turn = "agent";
 
   kkutu.exists(word)
-  .then((exist) => {
+  .then(async (exist) => {
+    if (data.turnPassed == 0) {
+      let hanbang = await kkutu.hanbang(word);
+      if (hanbang) {
+        res.json({ result: false, reason: "첫 턴에 한 방 단어를 사용할 수 없습니다." });
+        return;
+      }
+    }
+
     if (!exist) {
       data.turn = "user";
       res.json({ result: false, reason: "없는 단어입니다." });
@@ -95,6 +104,7 @@ app.post("/answer", (req, res) => {
       return;
     }
 
+    data.turnPassed++;
     user.updateCurrent(word);
     agent.updateCurrent(word);
 
