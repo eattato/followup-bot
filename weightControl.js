@@ -26,9 +26,16 @@ kkutu.connection.then(() => {
 
             if (!tags.includes("어인정")) {
                 // 한방 방어를 위해 기회만 되면 한방을 많이 쓰게함
-                let query = tags.includes("한방") ? kkutu.setWeight(word, 99999) : kkutu.setWeight(word, 3);
-                query.then(() => {console.log(`query done ${word}`)})
-                console.log(word);
+                // let query = tags.includes("한방") ? kkutu.setWeight(word, 99999) : kkutu.setWeight(word, 3);
+                // query.then(() => {console.log(`query done ${word}`)})
+                // console.log(word);
+
+                if (tags.includes("한방")) {
+                    let query = kkutu.setWeight(word, -1);
+                    query.then(() => {
+                        console.log(`query done ${word}`);
+                    })
+                }
             }
         });
     }

@@ -161,7 +161,7 @@ const KkutuQuery = class {
    * @param {number} weight 가중치 값
    */
   setWeight(word, weight) {
-    const queryStr = `UPDATE ${this.tables} SET weight = GREATEST(0, ${weight}) WHERE _id = '${word}';`
+    const queryStr = `UPDATE ${this.tables} SET weight = ${weight} WHERE _id = '${word}';`
     return this.query(queryStr);
   }
 };

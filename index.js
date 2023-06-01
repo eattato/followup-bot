@@ -231,6 +231,20 @@ app.post("/meaning", (req, res) => {
   })
 });
 
+app.post("/bruh", (req, res) => {
+  if (typeof req.body.word == "string" && req.body.word.length >= 1) {
+    let word = req.body.word.charAt(0);
+    kkutu.dictionary(word, true)
+      .then((rows) => {
+        res.json({ result: true, param: rows.length });
+      }).catch(() => {
+        res.json({ result: false, reason: "단어를 불러오지 못했습니다." });
+      })
+  } else {
+    res.json({ result: false, reason: "옳지 않은 변수입니다." });
+  }
+})
+
 // Static pages
 console.log(__dirname + "/public");
 app.use("/", express.static(__dirname + "/public"));

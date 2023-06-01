@@ -181,3 +181,45 @@ body {
   width: 20px;
   height: 5px;
 }
+
+
+/* bruh */
+.bruh_frame {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  height: auto;
+  margin-top: 10px;
+  margin-left: 10px;
+}
+
+.bruh_check {
+  width: 100px;
+  height: 30px;
+  text-align: center;
+  line-height: 30px;
+  border-radius: 10px;
+  background-color: white;
+  cursor: pointer;
+  font-size: 10px;
+  user-select: none;
+}
+
+.bruh_check.active {
+  background-color: lightgray;
+  cursor: default;
+}
+
+.bruh_info {
+  width: auto;
+  height: 20px;
+  text-align: center;
+  line-height: 20px;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 0 10px;
+  margin-bottom: 5px;
+  font-size: 12px;
+}

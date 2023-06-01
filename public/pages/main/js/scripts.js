@@ -60,6 +60,8 @@ const usedLog = (frame, res, who) => {
 
 // 메인
 $().ready(() => {
+  let currentWord = "";
+
   let session = null;
   let input = $(".input_frame input");
   let logFrame = $(".used_list");
@@ -74,6 +76,7 @@ $().ready(() => {
     .then((res) => res.json())
     .then((res) => {
       if (res.result == false) alert(res.reason);
+      currentWord = res.param.charAt(res.param.length - 1);
       input.attr(
         "placeholder",
         `${res.param.charAt(res.param.length - 1)} 으로 시작하는 단어를 입력하세요.`
@@ -157,6 +160,7 @@ $().ready(() => {
           setTimeout(() => {
             chat(botChatFrame, word);
             getMeaning(word, "bot");
+            currentWord = word.charAt(word.length - 1);
             input.attr(
               "placeholder",
               `${word.charAt(word.length - 1)} 으로 시작하는 단어를 입력하세요.`
@@ -189,5 +193,35 @@ $().ready(() => {
     if (i.which == 13) {
       answer(input.val());
     }
+  });
+
+  let canCheck = true;
+  let bruhCheck = $(".bruh_check");
+  let bruhInfo = $(".bruh_info");
+
+  bruhCheck.click(() => {
+    if (!canCheck) return;
+    canCheck = false;
+
+    bruhCheck.addClass("active");
+    bruhInfo.text("확인 중..");
+
+    fetch(`${url}/bruh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        word: currentWord
+      })
+    }).then((res) => res.json())
+    .then((res) => {
+      if (res.result == true) {
+        bruhInfo.text(`${res.param}개의 단어를 사용할 수 있습니다.`);
+      }
+    }).finally(() => {
+      canCheck = true;
+      bruhCheck.removeClass("active");
+    });
   });
 });
