@@ -61,6 +61,7 @@ const usedLog = (frame, res, who) => {
 // 메인
 $().ready(() => {
   let currentWord = "";
+  let turn = 0;
 
   let session = null;
   let input = $(".input_frame input");
@@ -134,7 +135,7 @@ $().ready(() => {
       }, 500);
 
       setTimeout(() => {
-        alert(`당신이 패배했습니다!\n{}턴에 걸쳐 패배!\n확인을 누르면 다시 플레이합니다.`);
+        alert(`당신이 패배했습니다!\n${turn}턴에 걸쳐 패배!\n확인을 누르면 다시 플레이합니다.`);
         window.location.href = window.location.href;
       }, 2000);
     } else { // 입력
@@ -152,6 +153,7 @@ $().ready(() => {
         .then((res) => {
           if (res.result == false) { canFetch = true; alert(res.reason); return; }
           let word = res.param;
+          turn++;
 
           chat(userChatFrame, content);
           getMeaning(content, "user");
@@ -176,7 +178,7 @@ $().ready(() => {
               }, 500);
 
               setTimeout(() => {
-                alert(`당신이 승리했습니다!\n{}턴에 걸쳐 승리!\n확인을 눌러 재시작합니다.`);
+                alert(`당신이 승리했습니다!\n${turn}턴에 걸쳐 승리!\n확인을 눌러 재시작합니다.`);
                 window.href = `${url}/main`;
               }, 1000);
             }

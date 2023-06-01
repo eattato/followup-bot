@@ -54,7 +54,8 @@ app.get("/init", (req, res) => {
       user: user,
       agent: agent,
       turn: "user",
-      turnPassed: 0
+      turnPassed: 0,
+      used: []
     }
     res.json({ result: true, param: word });
   });
@@ -120,17 +121,9 @@ app.post("/answer", (req, res) => {
     }
 
     data.turnPassed++;
+    data.used.push(word);
     user.updateCurrent(word);
     agent.updateCurrent(word);
-
-    kkutu.hanbang(word).then((hanbang) => {
-      if (!hanbang) {
-        console.log(`${word}의 가중치값을 증가시킵니다.`);
-        // kkutu.updateWeight(word, 10);
-      } else {
-        console.log(`${word}는 한방단어 이므로 가중치를 증가시키지 않았습니다.`);
-      }
-    })
 
     // 받고 봇으로 답장
     agent.getPick().then((agentRes) => {
@@ -138,6 +131,25 @@ app.post("/answer", (req, res) => {
       agent.updateCurrent(agentRes);
       data.turn = "user"
       // console.log(`user ${id} 에 대한 봇의 응답: ${agentRes}`)
+
+      // 승리할 경우 가중치 증가
+      if (agentRes == "gg") {
+        data.turn = "ended";
+        for (let i = 0; i < data.used.length - 1; i++) {
+          let word = data.used[i];
+          console.log(`${word}의 가중치값을 증가시킵니다.`);
+          kkutu.updateWeight(word, 1);
+        }
+        kkutu.hanbang(word).then((hanbang) => {
+          if (!hanbang) {
+            console.log(`${word}의 가중치값을 증가시킵니다.`);
+            kkutu.updateWeight(word, 1);
+          } else {
+            console.log(`${word}는 한방단어 이므로 가중치를 증가시키지 않았습니다.`);
+          }
+        })
+      }
+
       res.json({ result: true, param: agentRes });
     })
   })
